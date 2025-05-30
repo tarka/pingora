@@ -38,6 +38,11 @@ pub use tokio_rustls::{Accept, Connect, TlsAcceptor, TlsConnector, TlsStream};
 
 // This allows to skip certificate verification. Be highly cautious.
 pub use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+pub mod cert_resolvers {
+    pub use rustls::server::ResolvesServerCert;
+    pub use rustls::server::{AlwaysResolvesServerRawPublicKeys, ResolvesServerCertUsingSni};
+    pub use rustls::sign::{CertifiedKey, SingleCertAndKey};
+}
 
 /// Load the given file from disk as a buffered reader and use the pingora Error
 /// type instead of the std::io version
