@@ -29,6 +29,7 @@ pub use rustls::{
     client::WebPkiServerVerifier, version, CertificateError, ClientConfig, DigitallySignedStruct,
     Error as RusTlsError, KeyLogFile, RootCertStore, ServerConfig, SignatureScheme, Stream,
 };
+pub use rustls::crypto::aws_lc_rs::default_provider;
 pub use rustls_native_certs::load_native_certs;
 use rustls_pemfile::Item;
 pub use rustls_pki_types::{CertificateDer, PrivateKeyDer, ServerName, UnixTime};
@@ -39,9 +40,10 @@ pub use tokio_rustls::{Accept, Connect, TlsAcceptor, TlsConnector, TlsStream};
 // This allows to skip certificate verification. Be highly cautious.
 pub use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 pub mod cert_resolvers {
-    pub use rustls::server::ResolvesServerCert;
     pub use rustls::server::{AlwaysResolvesServerRawPublicKeys, ResolvesServerCertUsingSni};
+    pub use rustls::server::{ClientHello, ResolvesServerCert};
     pub use rustls::sign::{CertifiedKey, SingleCertAndKey};
+    pub use rustls_pki_types::{CertificateDer, PrivateKeyDer};
 }
 
 /// Load the given file from disk as a buffered reader and use the pingora Error
