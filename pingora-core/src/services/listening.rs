@@ -37,6 +37,7 @@ use pingora_error::Result;
 use pingora_runtime::current_handle;
 use pingora_timeout::timeout;
 use std::fs::Permissions;
+use std::net::ToSocketAddrs;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -119,7 +120,7 @@ impl<A> Service<A> {
     // the follow add* function has no effect if the server is already started
 
     /// Add a TCP listening endpoint with the given address (e.g., `127.0.0.1:8000`).
-    pub fn add_tcp(&mut self, addr: &str) {
+    pub fn add_tcp<T: ToSocketAddrs>(&mut self, addr: &T) {
         self.listeners.add_tcp(addr);
     }
 

@@ -28,11 +28,13 @@ use std::os::unix::io::RawFd;
 #[cfg(target_os = "linux")]
 use std::{thread, time};
 
+use crate::listeners::ServerAddress;
+
 // Utilities to transfer file descriptors between sockets, e.g. during graceful upgrades.
 
 /// Container for open file descriptors and their associated bind addresses.
 pub struct Fds {
-    map: HashMap<String, RawFd>,
+    map: HashMap<ServerAddress, RawFd>,
 }
 
 impl Fds {
@@ -42,19 +44,19 @@ impl Fds {
         }
     }
 
-    pub fn add(&mut self, bind: String, fd: RawFd) {
+    pub fn add(&mut self, bind: ServerAddress, fd: RawFd) {
         self.map.insert(bind, fd);
     }
 
-    pub fn get(&self, bind: &str) -> Option<&RawFd> {
+    pub fn get(&self, bind: &ServerAddress) -> Option<&RawFd> {
         self.map.get(bind)
     }
 
     pub fn serialize(&self) -> (Vec<String>, Vec<RawFd>) {
-        self.map.iter().map(|(key, val)| (key.clone(), val)).unzip()
+        self.map.iter().map(|(key, val)| (key.to_string(), val)).unzip()
     }
 
-    pub fn deserialize(&mut self, binds: Vec<String>, fds: Vec<RawFd>) {
+    pub fn deserialize(&mut self, binds: Vec<ServerAddress>, fds: Vec<RawFd>) {
         assert_eq!(binds.len(), fds.len());
         for (bind, fd) in binds.into_iter().zip(fds) {
             self.map.insert(bind, fd);
@@ -91,9 +93,9 @@ fn serialize_vec_string(vec_string: &[String], mut buf: &mut [u8]) -> usize {
     buf.write(joined.as_bytes()).unwrap()
 }
 
-fn deserialize_vec_string(buf: &[u8]) -> Result<Vec<String>, Error> {
+fn deserialize_vec_string(buf: &[u8]) -> Result<Vec<ServerAddress>, Error> {
     let joined = std::str::from_utf8(buf).map_err(|_| Error::EINVAL)?;
-    Ok(joined.split_ascii_whitespace().map(String::from).collect())
+    Ok(joined.split_ascii_whitespace().map(|s| ServerAddress::from(s)).collect())
 }
 
 #[cfg(target_os = "linux")]

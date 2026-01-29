@@ -81,7 +81,7 @@ use crate::server::ListenFds;
 
 use async_trait::async_trait;
 use pingora_error::Result;
-use std::{any::Any, fs::Permissions, sync::Arc};
+use std::{any::Any, fs::Permissions, net::ToSocketAddrs, sync::Arc};
 
 use l4::{ListenerEndpoint, Stream as L4Stream};
 use tls::{Acceptor, TlsSettings};
@@ -242,8 +242,11 @@ impl Listeners {
     }
 
     /// Add a TCP endpoint to `self`.
-    pub fn add_tcp(&mut self, addr: &str) {
-        self.add_address(ServerAddress::Tcp(addr.into(), None));
+    pub fn add_tcp<T: ToSocketAddrs>(&mut self, addr: &T) -> Result<()> {
+        let addr = addr.to_socket_addrs()?
+            .next
+        self.add_address(ServerAddress::Tcp(, None));
+        Ok(())
     }
 
     /// Add a TCP endpoint to `self`, with the given [`TcpSocketOptions`].

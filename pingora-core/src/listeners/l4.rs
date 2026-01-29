@@ -19,7 +19,7 @@ use pingora_error::{
     ErrorType::{AcceptError, BindError},
     OrErr, Result,
 };
-use std::io::ErrorKind;
+use std::{hash::Hash, io::ErrorKind};
 use std::net::{SocketAddr, ToSocketAddrs};
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, FromRawFd};
@@ -53,20 +53,51 @@ const LISTENER_BACKLOG: u32 = 65535;
 /// Address for listening server, either TCP/UDS socket.
 #[derive(Clone, Debug)]
 pub enum ServerAddress {
-    Tcp(String, Option<TcpSocketOptions>),
+    Tcp(SocketAddr, Option<TcpSocketOptions>),
     #[cfg(unix)]
     Uds(String, Option<Permissions>),
 }
 
-impl AsRef<str> for ServerAddress {
-    fn as_ref(&self) -> &str {
-        match &self {
-            Self::Tcp(l, _) => l,
-            #[cfg(unix)]
-            Self::Uds(l, _) => l,
+impl Hash for ServerAddress {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::Tcp(sock, _) => sock.hash(state),
+            Self::Uds(path, _) => path.hash(state),
         }
     }
 }
+
+impl ToString for ServerAddress {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Tcp(sock, _) => sock.to_string(),
+            Self::Uds(path, _) => path.clone(),
+        }
+    }
+}
+
+impl PartialEq for ServerAddress {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Tcp(sock, _), Self::Tcp(osock, _)) => sock == osock,
+            (Self::Uds(path, _), Self::Uds(opath, _)) => path == opath,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for ServerAddress {}
+
+
+// impl AsRef<str> for ServerAddress {
+//     fn as_ref(&self) -> &SocketAddr {
+//         match &self {
+//             Self::Tcp(l, _) => l.to_string(),
+//             #[cfg(unix)]
+//             Self::Uds(l, _) => l,
+//         }
+//     }
+// }
 
 impl ServerAddress {
     fn tcp_sock_opts(&self) -> Option<&TcpSocketOptions> {
@@ -220,7 +251,7 @@ fn from_raw_fd(address: &ServerAddress, fd: i32) -> Result<Listener> {
     }
 }
 
-async fn bind_tcp(addr: &str, opt: Option<TcpSocketOptions>) -> Result<Listener> {
+async fn bind_tcp(addr: &SocketAddr, opt: Option<TcpSocketOptions>) -> Result<Listener> {
     let mut try_count = 0;
     loop {
         let sock_addr = addr
@@ -318,17 +349,17 @@ impl ListenerEndpointBuilder {
             .expect("Tried to listen with no addr specified");
 
         let listener = if let Some(fds_table) = fds {
-            let addr_str = listen_addr.as_ref();
+//            let addr_str = listen_addr.as_ref();
 
             // consider make this mutex std::sync::Mutex or OnceCell
             let mut table = fds_table.lock().await;
 
-            if let Some(fd) = table.get(addr_str) {
+            if let Some(fd) = table.get(&listen_addr) {
                 from_raw_fd(&listen_addr, *fd)?
             } else {
                 // not found
                 let listener = bind(&listen_addr).await?;
-                table.add(addr_str.to_string(), listener.as_raw_fd());
+                table.add(listen_addr.clone(), listener.as_raw_fd());
                 listener
             }
         } else {
@@ -376,9 +407,9 @@ impl ListenerEndpoint {
         ListenerEndpointBuilder::new()
     }
 
-    pub fn as_str(&self) -> &str {
-        self.listen_addr.as_ref()
-    }
+    // pub fn as_str(&self) -> &str {
+    //     self.listen_addr.to_string().as_ref()
+    // }
 
     fn apply_stream_settings(&self, stream: &mut Stream) -> Result<()> {
         // settings are applied based on whether the underlying stream supports it
