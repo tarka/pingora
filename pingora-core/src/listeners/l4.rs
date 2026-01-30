@@ -89,19 +89,9 @@ impl PartialEq for ServerAddress {
 impl Eq for ServerAddress {}
 
 
-// impl AsRef<str> for ServerAddress {
-//     fn as_ref(&self) -> &SocketAddr {
-//         match &self {
-//             Self::Tcp(l, _) => l.to_string(),
-//             #[cfg(unix)]
-//             Self::Uds(l, _) => l,
-//         }
-//     }
-// }
-
 impl ServerAddress {
     fn tcp_sock_opts(&self) -> Option<&TcpSocketOptions> {
-        match &self {
+        match self {
             Self::Tcp(_, op) => op.into(),
             _ => None,
         }
@@ -315,6 +305,12 @@ pub struct ListenerEndpoint {
     connection_filter: Arc<dyn ConnectionFilter>,
 }
 
+impl ToString for ListenerEndpoint {
+    fn to_string(&self) -> String {
+        self.listen_addr.to_string()
+    }
+}
+
 #[derive(Default)]
 pub struct ListenerEndpointBuilder {
     listen_addr: Option<ServerAddress>,
@@ -407,10 +403,6 @@ impl ListenerEndpoint {
         ListenerEndpointBuilder::new()
     }
 
-    // pub fn as_str(&self) -> &str {
-    //     self.listen_addr.to_string().as_ref()
-    // }
-
     fn apply_stream_settings(&self, stream: &mut Stream) -> Result<()> {
         // settings are applied based on whether the underlying stream supports it
         stream.set_nodelay()?;
@@ -483,11 +475,11 @@ mod test {
 
     #[tokio::test]
     async fn test_listen_tcp() {
-        let addr = "127.0.0.1:7100";
+        let addr = "127.0.0.1:7100".parse().unwrap();
 
         let mut builder = ListenerEndpoint::builder();
 
-        builder.listen_addr(ServerAddress::Tcp(addr.into(), None));
+        builder.listen_addr(ServerAddress::Tcp(addr, None));
 
         #[cfg(unix)]
         let listener = builder.listen(None).await.unwrap();
@@ -513,7 +505,8 @@ mod test {
 
         let mut builder = ListenerEndpoint::builder();
 
-        builder.listen_addr(ServerAddress::Tcp("[::]:7101".into(), sock_opt));
+        let addr = "[::]:7101".parse().unwrap();
+        builder.listen_addr(ServerAddress::Tcp(addr, sock_opt));
 
         #[cfg(unix)]
         let listener = builder.listen(None).await.unwrap();
@@ -557,7 +550,8 @@ mod test {
     #[cfg(unix)]
     #[tokio::test]
     async fn test_tcp_so_reuseport() {
-        let addr = "127.0.0.1:7201";
+        let addr_str = "127.0.0.1:7201".to_string();
+        let addr = addr_str.parse().unwrap();
         let sock_opt = TcpSocketOptions {
             so_reuseport: Some(true),
             ..Default::default()
@@ -565,23 +559,24 @@ mod test {
 
         // Create first listener with SO_REUSEPORT
         let mut builder1 = ListenerEndpoint::builder();
-        builder1.listen_addr(ServerAddress::Tcp(addr.into(), Some(sock_opt.clone())));
+        builder1.listen_addr(ServerAddress::Tcp(addr, Some(sock_opt.clone())));
         let listener1 = builder1.listen(None).await.unwrap();
 
         // Create second listener with the same address and SO_REUSEPORT
         // This should succeed because SO_REUSEPORT is enabled
         let mut builder2 = ListenerEndpoint::builder();
-        builder2.listen_addr(ServerAddress::Tcp(addr.into(), Some(sock_opt)));
+        builder2.listen_addr(ServerAddress::Tcp(addr, Some(sock_opt)));
         let listener2 = builder2.listen(None).await.unwrap();
 
         // Both listeners should be able to bind to the same address
-        assert_eq!(listener1.as_str(), addr);
-        assert_eq!(listener2.as_str(), addr);
+        assert_eq!(listener1.to_string(), addr_str);
+        assert_eq!(listener2.to_string(), addr_str);
     }
 
     #[tokio::test]
     async fn test_tcp_so_reuseport_false() {
-        let addr = "127.0.0.1:7202";
+        let addr_str = "127.0.0.1:7202".to_string();
+        let addr = addr_str.parse().unwrap();
         let sock_opt_no_reuseport = TcpSocketOptions {
             so_reuseport: Some(false), // Explicitly disable SO_REUSEPORT
             ..Default::default()
@@ -590,7 +585,7 @@ mod test {
         // Create first listener without SO_REUSEPORT
         let mut builder1 = ListenerEndpoint::builder();
         builder1.listen_addr(ServerAddress::Tcp(
-            addr.into(),
+            addr,
             Some(sock_opt_no_reuseport.clone()),
         ));
         let listener1 = builder1.listen(None).await.unwrap();
@@ -611,7 +606,7 @@ mod test {
         );
 
         // Verify the first listener still works
-        assert_eq!(listener1.as_str(), addr);
+        assert_eq!(listener1.to_string(), addr_str);
     }
 
     #[cfg(feature = "connection_filter")]

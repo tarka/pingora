@@ -102,7 +102,7 @@ impl<A> Service<A> {
     /// let mut service = MyService::new();
     /// let filter = Arc::new(AcceptAllFilter);
     /// service.set_connection_filter(filter);
-    /// ```   
+    /// ```
     #[cfg(feature = "connection_filter")]
     pub fn set_connection_filter(&mut self, filter: Arc<dyn ConnectionFilter>) {
         self.connection_filter = filter.clone();
@@ -120,12 +120,13 @@ impl<A> Service<A> {
     // the follow add* function has no effect if the server is already started
 
     /// Add a TCP listening endpoint with the given address (e.g., `127.0.0.1:8000`).
-    pub fn add_tcp<T: ToSocketAddrs>(&mut self, addr: &T) {
-        self.listeners.add_tcp(addr);
+    pub fn add_tcp<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T) {
+        // SOCKFIX
+        self.listeners.add_tcp(addr).unwrap();
     }
 
     /// Add a TCP listening endpoint with the given [`TcpSocketOptions`].
-    pub fn add_tcp_with_settings(&mut self, addr: &str, sock_opt: TcpSocketOptions) {
+    pub fn add_tcp_with_settings<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, sock_opt: TcpSocketOptions) {
         self.listeners.add_tcp_with_settings(addr, sock_opt);
     }
 
@@ -139,14 +140,14 @@ impl<A> Service<A> {
     }
 
     /// Add a TLS listening endpoint with the given certificate and key paths.
-    pub fn add_tls(&mut self, addr: &str, cert_path: &str, key_path: &str) -> Result<()> {
+    pub fn add_tls<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, cert_path: &str, key_path: &str) -> Result<()> {
         self.listeners.add_tls(addr, cert_path, key_path)
     }
 
     /// Add a TLS listening endpoint with the given [`TlsSettings`] and [`TcpSocketOptions`].
-    pub fn add_tls_with_settings(
+    pub fn add_tls_with_settings<T: ToSocketAddrs + ?Sized>(
         &mut self,
-        addr: &str,
+        addr: &T,
         sock_opt: Option<TcpSocketOptions>,
         settings: TlsSettings,
     ) {
