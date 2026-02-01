@@ -55,7 +55,8 @@ impl Fds {
     }
 
     fn serialize(&self) -> (Vec<String>, Vec<RawFd>) {
-            self.map.iter()
+        self.map
+            .iter()
             .map(|(key, val)| (key.to_string(), val))
             .unzip()
     }
@@ -63,8 +64,7 @@ impl Fds {
     fn deserialize(&mut self, binds: Vec<String>, fds: Vec<RawFd>) {
         assert_eq!(binds.len(), fds.len());
         for (bind, fd) in binds.into_iter().zip(fds) {
-            let sa = ServerAddress::from_str(&bind)
-                .expect("Failed to convert to ServerAddress");
+            let sa = ServerAddress::from_str(&bind).expect("Failed to convert to ServerAddress");
             self.map.insert(sa, fd);
         }
     }

@@ -132,7 +132,7 @@ impl TransportStackBuilder {
     ) -> Result<TransportStack> {
         let mut builder = ListenerEndpoint::builder();
 
-//        println!("FDS: {:#?}", upgrade_listeners);
+        //        println!("FDS: {:#?}", upgrade_listeners);
         println!("L4: {:#?}", self.l4);
         match &self.l4 {
             ServerAddress::Tcp(sa, _so) => {
@@ -143,10 +143,9 @@ impl TransportStackBuilder {
                     }
                     _ => (),
                 }
-            },
+            }
             ServerAddress::Uds(_path, _) => println!("UNIX"),
         };
-
 
         builder.listen_addr(self.l4.clone());
 
@@ -218,8 +217,7 @@ impl UninitializedStream {
 
 fn to_socketaddr<T: ToSocketAddrs + ?Sized>(addr: &T) -> Result<std::net::SocketAddr> {
     // SOCKFIX
-    let addr = addr.to_socket_addrs().unwrap()
-        .next().unwrap();
+    let addr = addr.to_socket_addrs().unwrap().next().unwrap();
     Ok(addr)
 }
 
@@ -258,7 +256,11 @@ impl Listeners {
     /// and path to the certificate/private key pairs.
     /// This endpoint will adopt the [Mozilla Intermediate](https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29)
     /// server side TLS settings.
-    pub fn tls<T: ToSocketAddrs + ?Sized>(addr: &T, cert_path: &str, key_path: &str) -> Result<Self> {
+    pub fn tls<T: ToSocketAddrs + ?Sized>(
+        addr: &T,
+        cert_path: &str,
+        key_path: &str,
+    ) -> Result<Self> {
         let mut listeners = Self::new();
         listeners.add_tls(addr, cert_path, key_path)?;
         Ok(listeners)
@@ -271,7 +273,11 @@ impl Listeners {
     }
 
     /// Add a TCP endpoint to `self`, with the given [`TcpSocketOptions`].
-    pub fn add_tcp_with_settings<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, sock_opt: TcpSocketOptions) {
+    pub fn add_tcp_with_settings<T: ToSocketAddrs + ?Sized>(
+        &mut self,
+        addr: &T,
+        sock_opt: TcpSocketOptions,
+    ) {
         // SOCKFIX
         let addr = to_socketaddr(addr).unwrap();
         self.add_address(ServerAddress::Tcp(addr, Some(sock_opt)));
@@ -285,7 +291,12 @@ impl Listeners {
 
     /// Add a TLS endpoint to `self` with the [Mozilla Intermediate](https://wiki.mozilla.org/Security/Server_Side_TLS#Intermediate_compatibility_.28recommended.29)
     /// server side TLS settings.
-    pub fn add_tls<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, cert_path: &str, key_path: &str) -> Result<()> {
+    pub fn add_tls<T: ToSocketAddrs + ?Sized>(
+        &mut self,
+        addr: &T,
+        cert_path: &str,
+        key_path: &str,
+    ) -> Result<()> {
         self.add_tls_with_settings(addr, None, TlsSettings::intermediate(cert_path, key_path)?);
         Ok(())
     }

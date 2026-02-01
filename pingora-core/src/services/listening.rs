@@ -126,7 +126,11 @@ impl<A> Service<A> {
     }
 
     /// Add a TCP listening endpoint with the given [`TcpSocketOptions`].
-    pub fn add_tcp_with_settings<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, sock_opt: TcpSocketOptions) {
+    pub fn add_tcp_with_settings<T: ToSocketAddrs + ?Sized>(
+        &mut self,
+        addr: &T,
+        sock_opt: TcpSocketOptions,
+    ) {
         self.listeners.add_tcp_with_settings(addr, sock_opt);
     }
 
@@ -140,7 +144,12 @@ impl<A> Service<A> {
     }
 
     /// Add a TLS listening endpoint with the given certificate and key paths.
-    pub fn add_tls<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T, cert_path: &str, key_path: &str) -> Result<()> {
+    pub fn add_tls<T: ToSocketAddrs + ?Sized>(
+        &mut self,
+        addr: &T,
+        cert_path: &str,
+        key_path: &str,
+    ) -> Result<()> {
         self.listeners.add_tls(addr, cert_path, key_path)
     }
 
@@ -267,7 +276,6 @@ impl<A: ServerApp + Send + Sync + 'static> ServiceTrait for Service<A> {
         listeners_per_fd: usize,
     ) {
         let runtime = current_handle();
-
         let endpoints = self
             .listeners
             .build(

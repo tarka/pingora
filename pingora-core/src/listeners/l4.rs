@@ -16,11 +16,10 @@
 use log::debug;
 use log::warn;
 use pingora_error::{
-    Error,
-    ErrorSource,
-    ErrorType::{self, AcceptError, BindError,}, OrErr, Result
+    Error, ErrorSource,
+    ErrorType::{self, AcceptError, BindError},
+    OrErr, Result,
 };
-use std::{hash::Hash, io::ErrorKind, str::FromStr};
 use std::net::{SocketAddr, ToSocketAddrs};
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, FromRawFd};
@@ -30,6 +29,7 @@ use std::os::unix::net::UnixListener as StdUnixListener;
 use std::os::windows::io::{AsRawSocket, FromRawSocket};
 use std::time::Duration;
 use std::{fs::Permissions, sync::Arc};
+use std::{hash::Hash, io::ErrorKind, str::FromStr};
 use tokio::net::TcpSocket;
 
 #[cfg(feature = "connection_filter")]
@@ -83,24 +83,22 @@ impl FromStr for ServerAddress {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         if let Some(sa_str) = s.strip_prefix("tcp:") {
-            let sockaddr = sa_str.parse::<SocketAddr>()
-                .or_err(ErrorType::InternalError,
-                        "Failed to parse address")?;
+            let sockaddr = sa_str
+                .parse::<SocketAddr>()
+                .or_err(ErrorType::InternalError, "Failed to parse address")?;
             Ok(ServerAddress::Tcp(sockaddr, None))
-
         } else if let Some(usock) = s.strip_prefix("uds:") {
             Ok(ServerAddress::Uds(usock.to_string(), None))
-
         } else {
-            Err(Error::create(ErrorType::InternalError,
-                              ErrorSource::Internal,
-                              Some(format!("Unknown ServerAddress: {s}").into()),
-                              None,))
+            Err(Error::create(
+                ErrorType::InternalError,
+                ErrorSource::Internal,
+                Some(format!("Unknown ServerAddress: {s}").into()),
+                None,
+            ))
         }
-
     }
 }
-
 
 impl PartialEq for ServerAddress {
     fn eq(&self, other: &Self) -> bool {
@@ -113,7 +111,6 @@ impl PartialEq for ServerAddress {
 }
 
 impl Eq for ServerAddress {}
-
 
 impl ServerAddress {
     fn tcp_sock_opts(&self) -> Option<&TcpSocketOptions> {
@@ -371,7 +368,7 @@ impl ListenerEndpointBuilder {
             .expect("Tried to listen with no addr specified");
 
         let listener = if let Some(fds_table) = fds {
-//            let addr_str = listen_addr.as_ref();
+            //            let addr_str = listen_addr.as_ref();
 
             // consider make this mutex std::sync::Mutex or OnceCell
             let mut table = fds_table.lock().await;
