@@ -132,6 +132,22 @@ impl TransportStackBuilder {
     ) -> Result<TransportStack> {
         let mut builder = ListenerEndpoint::builder();
 
+//        println!("FDS: {:#?}", upgrade_listeners);
+        println!("L4: {:#?}", self.l4);
+        match &self.l4 {
+            ServerAddress::Tcp(sa, _so) => {
+                println!("SA: {sa:#?}");
+                match sa {
+                    std::net::SocketAddr::V6(ip6) => {
+                        println!("SCOPE: {:?}", ip6.scope_id());
+                    }
+                    _ => (),
+                }
+            },
+            ServerAddress::Uds(_path, _) => println!("UNIX"),
+        };
+
+
         builder.listen_addr(self.l4.clone());
 
         #[cfg(feature = "connection_filter")]

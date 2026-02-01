@@ -16,10 +16,11 @@
 use log::debug;
 use log::warn;
 use pingora_error::{
-    ErrorType::{AcceptError, BindError},
-    OrErr, Result,
+    Error,
+    ErrorSource,
+    ErrorType::{self, AcceptError, BindError,}, OrErr, Result
 };
-use std::{hash::Hash, io::ErrorKind};
+use std::{hash::Hash, io::ErrorKind, str::FromStr};
 use std::net::{SocketAddr, ToSocketAddrs};
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, FromRawFd};
@@ -67,14 +68,39 @@ impl Hash for ServerAddress {
     }
 }
 
+// Simple tagged serialisation/deserialisation
 impl ToString for ServerAddress {
     fn to_string(&self) -> String {
         match self {
-            Self::Tcp(sock, _) => sock.to_string(),
-            Self::Uds(path, _) => path.clone(),
+            Self::Tcp(sock, _) => format!("tcp:{sock}"),
+            Self::Uds(path, _) => format!("uds:{path}"),
         }
     }
 }
+
+impl FromStr for ServerAddress {
+    type Err = Box<pingora_error::Error>;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        if let Some(sa_str) = s.strip_prefix("tcp:") {
+            let sockaddr = sa_str.parse::<SocketAddr>()
+                .or_err(ErrorType::InternalError,
+                        "Failed to parse address")?;
+            Ok(ServerAddress::Tcp(sockaddr, None))
+
+        } else if let Some(usock) = s.strip_prefix("uds:") {
+            Ok(ServerAddress::Uds(usock.to_string(), None))
+
+        } else {
+            Err(Error::create(ErrorType::InternalError,
+                              ErrorSource::Internal,
+                              Some(format!("Unknown ServerAddress: {s}").into()),
+                              None,))
+        }
+
+    }
+}
+
 
 impl PartialEq for ServerAddress {
     fn eq(&self, other: &Self) -> bool {

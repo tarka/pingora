@@ -267,6 +267,7 @@ impl<A: ServerApp + Send + Sync + 'static> ServiceTrait for Service<A> {
         listeners_per_fd: usize,
     ) {
         let runtime = current_handle();
+
         let endpoints = self
             .listeners
             .build(
