@@ -121,8 +121,8 @@ impl<A> Service<A> {
 
     /// Add a TCP listening endpoint with the given address (e.g., `127.0.0.1:8000`).
     pub fn add_tcp<T: ToSocketAddrs + ?Sized>(&mut self, addr: &T) {
-        // SOCKFIX
-        self.listeners.add_tcp(addr).unwrap();
+        self.listeners.add_tcp(addr)
+            .expect("Failed to convert value to SocketAddr");
     }
 
     /// Add a TCP listening endpoint with the given [`TcpSocketOptions`].

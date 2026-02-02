@@ -78,9 +78,13 @@ use crate::protocols::{l4::socket::SocketAddr, tls::TlsRef, Stream};
 
 #[cfg(unix)]
 use crate::server::ListenFds;
+use pingora_error::{
+    Error, ErrorSource,
+    ErrorType::{self, AcceptError, BindError},
+    OrErr, OkOrErr, Result,
+};
 
 use async_trait::async_trait;
-use pingora_error::Result;
 use std::{any::Any, fs::Permissions, net::ToSocketAddrs, sync::Arc};
 
 use l4::{ListenerEndpoint, Stream as L4Stream};
@@ -216,8 +220,10 @@ impl UninitializedStream {
 }
 
 fn to_socketaddr<T: ToSocketAddrs + ?Sized>(addr: &T) -> Result<std::net::SocketAddr> {
-    // SOCKFIX
-    let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+    let addr = addr.to_socket_addrs()
+        .or_err(ErrorType::InternalError, "Failed to convert value to SocketAddr")?
+        .next()
+        .or_err(ErrorType::InternalError, "No value for SocketAddr")?;
     Ok(addr)
 }
 
@@ -240,7 +246,8 @@ impl Listeners {
     /// Create a new [`Listeners`] with a TCP server endpoint from the given string.
     pub fn tcp<T: ToSocketAddrs + ?Sized>(addr: &T) -> Self {
         let mut listeners = Self::new();
-        listeners.add_tcp(addr).unwrap(); // SOCKFIX
+        listeners.add_tcp(addr)
+            .expect("Failed to convert value to SocketAddr");
         listeners
     }
 
@@ -278,8 +285,8 @@ impl Listeners {
         addr: &T,
         sock_opt: TcpSocketOptions,
     ) {
-        // SOCKFIX
-        let addr = to_socketaddr(addr).unwrap();
+        let addr = to_socketaddr(addr)
+            .expect("Failed to convert value to SocketAddr");
         self.add_address(ServerAddress::Tcp(addr, Some(sock_opt)));
     }
 
@@ -309,8 +316,8 @@ impl Listeners {
         sock_opt: Option<TcpSocketOptions>,
         settings: TlsSettings,
     ) {
-        // SOCKFIX
-        let addr = to_socketaddr(addr).unwrap();
+        let addr = to_socketaddr(addr)
+            .expect("Failed to convert value to SocketAddr");
         self.add_endpoint(ServerAddress::Tcp(addr.into(), sock_opt), Some(settings));
     }
 

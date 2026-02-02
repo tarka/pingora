@@ -364,31 +364,28 @@ mod tests {
 
     #[test]
     fn test_add_get() {
-        // SOCKFIX
-        // init_log();
-        // let mut fds = Fds::new();
-        // let key = "1.1.1.1:80".to_string();
-        // fds.add(key.clone(), 128);
-        // assert_eq!(128, *fds.get(&key).unwrap());
+        init_log();
+        let mut fds = Fds::new();
+        let key = ServerAddress::from_str("tcp:1.1.1.1:80").unwrap();
+        fds.add(key.clone(), 128);
+        assert_eq!(128, *fds.get(&key).unwrap());
     }
 
     #[test]
     fn test_table_serde() {
-        // SOCKFIX
+        init_log();
+        let mut fds = Fds::new();
+        let key1 = ServerAddress::from_str("tcp:1.1.1.1:80").unwrap();
+        fds.add(key1.clone(), 128);
+        let key2 = ServerAddress::from_str("tcp:1.1.1.1:443").unwrap();
+        fds.add(key2.clone(), 129);
 
-        // init_log();
-        // let mut fds = Fds::new();
-        // let key1 = "1.1.1.1:80".to_string();
-        // fds.add(key1.clone(), 128);
-        // let key2 = "1.1.1.1:443".to_string();
-        // fds.add(key2.clone(), 129);
+        let (k, v) = fds.serialize();
+        let mut fds2 = Fds::new();
+        fds2.deserialize(k, v);
 
-        // let (k, v) = fds.serialize();
-        // let mut fds2 = Fds::new();
-        // fds2.deserialize(k, v);
-
-        // assert_eq!(128, *fds2.get(&key1).unwrap());
-        // assert_eq!(129, *fds2.get(&key2).unwrap());
+        assert_eq!(128, *fds2.get(&key1).unwrap());
+        assert_eq!(129, *fds2.get(&key2).unwrap());
     }
 
     #[test]
@@ -443,39 +440,37 @@ mod tests {
 
     #[test]
     fn test_serde_via_socket() {
-        // SOCKFIX
+        init_log();
+        let mut fds = Fds::new();
+        let key1 = ServerAddress::from_str("tcp:1.1.1.1:80").unwrap();
+        let dumb_fd1 = socket::socket(
+            AddressFamily::Unix,
+            SockType::Stream,
+            SockFlag::empty(),
+            None,
+        )
+        .unwrap();
+        fds.add(key1.clone(), dumb_fd1);
+        let key2 = ServerAddress::from_str("tcp:1.1.1.1:443").unwrap();
+        let dumb_fd2 = socket::socket(
+            AddressFamily::Unix,
+            SockType::Stream,
+            SockFlag::empty(),
+            None,
+        )
+        .unwrap();
+        fds.add(key2.clone(), dumb_fd2);
 
-        // init_log();
-        // let mut fds = Fds::new();
-        // let key1 = "1.1.1.1:80".to_string();
-        // let dumb_fd1 = socket::socket(
-        //     AddressFamily::Unix,
-        //     SockType::Stream,
-        //     SockFlag::empty(),
-        //     None,
-        // )
-        // .unwrap();
-        // fds.add(key1.clone(), dumb_fd1);
-        // let key2 = "1.1.1.1:443".to_string();
-        // let dumb_fd2 = socket::socket(
-        //     AddressFamily::Unix,
-        //     SockType::Stream,
-        //     SockFlag::empty(),
-        //     None,
-        // )
-        // .unwrap();
-        // fds.add(key2.clone(), dumb_fd2);
+        let child = thread::spawn(move || {
+            let mut fds2 = Fds::new();
+            fds2.get_from_sock("/tmp/pingora_fds_receive2.sock")
+                .unwrap();
+            assert!(*fds2.get(&key1).unwrap() > 0);
+            assert!(*fds2.get(&key2).unwrap() > 0);
+        });
 
-        // let child = thread::spawn(move || {
-        //     let mut fds2 = Fds::new();
-        //     fds2.get_from_sock("/tmp/pingora_fds_receive2.sock")
-        //         .unwrap();
-        //     assert!(*fds2.get(&key1).unwrap() > 0);
-        //     assert!(*fds2.get(&key2).unwrap() > 0);
-        // });
-
-        // fds.send_to_sock("/tmp/pingora_fds_receive2.sock").unwrap();
-        // child.join().unwrap();
+        fds.send_to_sock("/tmp/pingora_fds_receive2.sock").unwrap();
+        child.join().unwrap();
     }
 
     #[test]
